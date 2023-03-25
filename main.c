@@ -139,12 +139,13 @@ void read_dir(char *path, char *shablon)
     traverse(&dir_list, print_name, shablon);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    printf("in dir \e[1;34m.\e[0m:\n");
-    read_dir(".", "int");
 
-    // int k = seek_substring_KMP("abababa", "aba");
-    // printf("%d\n", k);
+    if (argc == 2)
+    {
+        printf("in dir \e[1;34m.\e[0m:\n");
+        read_dir(".", argv[1]);
+    }
     return 0;
 }
