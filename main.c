@@ -92,7 +92,7 @@ void read_dir(char *path, char *shablon)
             item.path = path_;
             add_item_head(&dir_list, item);
         }
-        else
+        else if ((file->d_type & DT_REG) == DT_REG)
         {
             printf("\e[1;35m%s\e[0m:\n", file->d_name);
             FILE *f = fopen(path_, "rb");
@@ -142,10 +142,10 @@ void read_dir(char *path, char *shablon)
 int main(int argc, char *argv[])
 {
 
-    if (argc == 2)
+    if (argc == 3)
     {
-        printf("in dir \e[1;34m.\e[0m:\n");
-        read_dir(".", argv[1]);
+        printf("in dir \e[1;34m%s\e[0m:\n", argv[1]);
+        read_dir(argv[1], argv[2]);
     }
     return 0;
 }
