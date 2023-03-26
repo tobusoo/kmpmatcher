@@ -3,3 +3,4 @@
 *.d
 app
 .vscode
+*.log

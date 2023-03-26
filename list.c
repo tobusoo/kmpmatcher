@@ -89,12 +89,12 @@ void empty_the_list(List *plist)
     }
 }
 
-void traverse(const List *plist, void (*pfun)(Item item, char *shablon), char *shablon)
+void traverse(const List *plist, void (*pfun)(Item item, char *shablon, FILE *out), char *shablon, FILE *out)
 {
     Node *pnode = *plist;
     while (pnode != NULL)
     {
-        (*pfun)(pnode->item, shablon);
+        (*pfun)(pnode->item, shablon, out);
         pnode = pnode->next;
     }
 }

@@ -45,7 +45,7 @@ void empty_the_list(List *list);
 /* plist is a pointer to the initialized list.  */
 /* pfun points to a function that takes the     */
 /* Item argument and has no return value.       */
-void traverse(const List *plist, void (*pfun)(Item item, char *shablon), char *shablon);
+void traverse(const List *plist, void (*pfun)(Item item, char *shablon, FILE *out), char *shablon, FILE *out);
 
 /* This function returns True if it was         */
 /* possible to add an item to the end           */

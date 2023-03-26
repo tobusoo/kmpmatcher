@@ -3,15 +3,16 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "list.h"
 
-void read_dir(char *path, char *shablon);
+void read_dir(char *path, char *shablon, FILE *out);
 
-void print_name(Item item, char *shablon)
+void print_name(Item item, char *shablon, FILE *out)
 {
     printf("in dir \e[1;34m%s\e[0m:\n", item.path);
-    read_dir(item.path, shablon);
+    read_dir(item.path, shablon, out);
 }
 
 int seek_substring_KMP(char s[], char p[])
@@ -52,7 +53,7 @@ int seek_substring_KMP(char s[], char p[])
     return -1;
 }
 
-void read_dir(char *path, char *shablon)
+void read_dir(char *path, char *shablon, FILE *out)
 {
     DIR *dir = opendir(path);
     if (!dir)
@@ -97,19 +98,24 @@ void read_dir(char *path, char *shablon)
             printf("\e[1;35m%s\e[0m:\n", file->d_name);
             FILE *f = fopen(path_, "rb");
             char word[256] = {0};
+            int q = 0, cnt = 0;
+            fprintf(out, "'%s' In file '%s':\n", shablon, path_);
             while (fgets(word, 256, f) != NULL)
             {
+                q++;
                 int k = seek_substring_KMP(word, shablon);
                 for (int i = 0; i < strlen(word); i++)
                 {
                     int flag = 0;
                     if (i == k)
                     {
+                        fprintf(out, "Ln %d, Col %d\n", q, k + 1);
                         printf("\e[1;32;4m");
                         for (int j = k; j < k + strlen(shablon); j++)
                             putchar(word[j]);
                         printf("\e[0m");
                         i += strlen(shablon);
+                        cnt++;
                         // printf("\nk before = %d", k);
                         int t = seek_substring_KMP(word + k + 1, shablon);
                         // printf("\tt = %d\n", t);
@@ -131,12 +137,15 @@ void read_dir(char *path, char *shablon)
                 }
             }
             printf("\n");
+            // fprintf(out, "\n");
+            if (cnt == 0)
+                fprintf(out, "No results found\n");
             fclose(f);
         }
     }
 
     printf("\n\n");
-    traverse(&dir_list, print_name, shablon);
+    traverse(&dir_list, print_name, shablon, out);
 }
 
 int main(int argc, char *argv[])
@@ -144,8 +153,23 @@ int main(int argc, char *argv[])
 
     if (argc == 3)
     {
+        FILE *out = fopen("log.log", "a+");
+        struct tm *ptr;
+        time_t lt;
+        lt = time(NULL);
+        ptr = localtime(&lt);
+        char buf[64] = {0};
+        strftime(buf, 64, "%d %b %Y %H:%M:%S", ptr);
+        fprintf(out, "[%s]\n", buf);
         printf("in dir \e[1;34m%s\e[0m:\n", argv[1]);
-        read_dir(argv[1], argv[2]);
+        read_dir(argv[1], argv[2], out);
+        fprintf(out, "\n");
+        fclose(out);
     }
+    else
+    {
+        printf("Usage:\n%s <dir> <match>\n", argv[0]);
+    }
+
     return 0;
 }
