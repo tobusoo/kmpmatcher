@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include "list.h"
+#include "kmp.h"
 
 void read_dir(char *path, char *shablon, FILE *out);
 
@@ -13,44 +14,6 @@ void print_name(Item item, char *shablon, FILE *out)
 {
     printf("in dir \e[1;34m%s\e[0m:\n", item.path);
     read_dir(item.path, shablon, out);
-}
-
-int seek_substring_KMP(char s[], char p[])
-{
-    int i, j, N, M;
-    N = strlen(s);
-    M = strlen(p);
-    // printf("\nmda1: %s\nmda2: %s\n", s, p);
-
-    // Динамический массив длины М
-    int *d = (int *)malloc(M * sizeof(int));
-
-    // Вычисление префикс-функции
-    d[0] = 0;
-    for (i = 1, j = 0; i < M; i++)
-    {
-        while (j > 0 && p[j] != p[i])
-            j = d[j - 1];
-        if (p[j] == p[i])
-            j++;
-        d[i] = j;
-    }
-
-    // Поиск
-    for (i = 0, j = 0; i < N; i++)
-    {
-        while (j > 0 && p[j] != s[i])
-            j = d[j - 1];
-        if (p[j] == s[i])
-            j++;
-        if (j == M)
-        {
-            // printf("Смещение %d\n", i - j + 1);
-            return i - j + 1;
-        }
-    }
-    free(d);
-    return -1;
 }
 
 void read_dir(char *path, char *shablon, FILE *out)
