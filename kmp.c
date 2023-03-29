@@ -7,8 +7,6 @@ int* prefix_func(char pattern[], size_t size)
     int* pi = (int*)malloc(size * sizeof(int));
     pi[0] = 0;
     for (int i = 1, j = 0; i < size; i++) {
-        if (pattern[j] == '\\') {
-        }
         while (j > 0 && pattern[j] != pattern[i] && pattern[j] != '.')
             j = pi[j - 1];
         if (pattern[j] == pattern[i] || pattern[j] == '.')
