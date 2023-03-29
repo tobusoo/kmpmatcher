@@ -1,13 +1,14 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
-int *prefix_func(char pattern[], size_t size)
+int* prefix_func(char pattern[], size_t size)
 {
-    int *pi = (int *)malloc(size * sizeof(int));
+    int* pi = (int*)malloc(size * sizeof(int));
     pi[0] = 0;
-    for (int i = 1, j = 0; i < size; i++)
-    {
+    for (int i = 1, j = 0; i < size; i++) {
+        if (pattern[j] == '\\') {
+        }
         while (j > 0 && pattern[j] != pattern[i] && pattern[j] != '.')
             j = pi[j - 1];
         if (pattern[j] == pattern[i] || pattern[j] == '.')
@@ -23,18 +24,15 @@ int seek_substring_KMP(char text[], char pattern[])
     size_t text_len = strlen(text);
     size_t pattern_len = strlen(pattern);
 
-    int *pi = prefix_func(pattern, pattern_len);
+    int* pi = prefix_func(pattern, pattern_len);
 
-    for (i = 0, j = 0; i < text_len; i++)
-    {
-        while (j > 0 && (pattern[j] != text[i]) && pattern[j] != '.')
-        {
+    for (i = 0, j = 0; i < text_len; i++) {
+        while (j > 0 && pattern[j] != text[i] && pattern[j] != '.') {
             j = pi[j - 1];
         }
         if (pattern[j] == text[i] || pattern[j] == '.')
             j++;
-        if (j == pattern_len)
-        {
+        if (j == pattern_len) {
             free(pi);
             return i - j + 1;
         }
@@ -44,11 +42,16 @@ int seek_substring_KMP(char text[], char pattern[])
     return -1;
 }
 
-// TODO: uy part = (return.) WHY???????
-// TODO: quic. = -1 ????
-// int main()
+// int main(int argc, char* argv[])
 // {
-//     char text[] = "Advertisements want to persuade us to buy particular The quick brown fox jumps over the lazy dog You notice the name of the refreshing drink because you think it could be useful for you to satisfy your thirst.";
+//     if (argc != 1)
+//         printf("%s\n", argv[1]);
+//     char text[]
+//             = "Advertisements go.gle want to persuade us to buy particular
+//             The "
+//               "quick brown fox jumps over the lazy dog You notice the name of
+//               " "the refreshing drink because you think it could be useful
+//               for " "you to satisfy your thirst.";
 //     // char pattern1[] = ".o. ..... over";
 //     // int index1 = seek_substring_KMP(text, pattern1);
 //     // printf("Index of '%s' %d\n", pattern1, index1);
@@ -61,16 +64,19 @@ int seek_substring_KMP(char text[], char pattern[])
 //     char pattern5[] = "quic.";
 //     char pattern6[] = "...ick";
 //     char pattern7[] = "notice";
+//     char pattern8[] = "go.gle";
 //     int index3 = seek_substring_KMP(text, pattern3);
 //     int index4 = seek_substring_KMP(text, pattern4);
 //     int index5 = seek_substring_KMP(text, pattern5);
 //     int index6 = seek_substring_KMP(text, pattern6);
 //     int index7 = seek_substring_KMP(text, pattern7);
+//     int index8 = seek_substring_KMP(text, pattern8);
 //     printf("Index of '%s' %d\n", pattern7, index7);
 //     printf("Index of '%s' %d\n", pattern3, index3);
 //     printf("Index of '%s' %d\n", pattern4, index4);
 //     printf("Index of '%s' %d\n", pattern5, index5);
 //     printf("Index of '%s' %d\n", pattern6, index6);
+//     printf("Index of '%s' %d\n", pattern8, index8);
 
 //     return 0;
 // }
