@@ -1,136 +1,134 @@
+#include <dirent.h>
+#include <glib.h>
+#include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <dirent.h>
-#include <stdlib.h>
 #include <time.h>
 
-#include "list.h"
 #include "kmp.h"
 
-void read_dir(char *path, char *shablon, FILE *out);
+#define TIME 0
+#define MESSAGE 1
+#define MAX_LEN 260
+#define MAX_MESSAGE_LEN 1024
 
-void print_name(Item item, char *shablon, FILE *out)
+void log_write(int status, char* format, ...);
+
+void process_file(char* path, char* pattern, char* name)
 {
-    printf("in dir \e[1;34m%s\e[0m:\n", item.path);
-    read_dir(item.path, shablon, out);
-}
-
-void read_dir(char *path, char *shablon, FILE *out)
-{
-    DIR *dir = opendir(path);
-    if (!dir)
-    {
-        printf("Не удалось открыть директорию %s\n", path);
-        return;
-    }
-    struct dirent *file;
-    List dir_list;
-    Item item;
-    init_list(&dir_list);
-
-    while ((file = readdir(dir)) != NULL)
-    {
-        if (strcmp(file->d_name, ".") == 0)
-            continue;
-        if (strcmp(file->d_name, "..") == 0)
-            continue;
-        if (strcmp(file->d_name, ".git") == 0)
-            continue;
-        // if (strcmp(file->d_name, "list.h") == 0)
-        //     continue;
-        // if (strcmp(file->d_name, "list.c") == 0)
-        //     continue;
-        // if (strcmp(file->d_name, "main.c") == 0)
-        // continue;
-        if (strcmp(file->d_name, "app") == 0)
-            continue;
-        if (strcmp(file->d_name, ".gitignore") == 0)
-            continue;
-        char *path_ = malloc(sizeof(*path) * 256);
-        strncpy(path_, path, 256);
-        strncat(path_, "/", 2);
-        strncat(path_, file->d_name, 254);
-        if ((file->d_type & DT_DIR) == DT_DIR)
-        {
-            item.path = path_;
-            add_item_head(&dir_list, item);
-        }
-        else if ((file->d_type & DT_REG) == DT_REG)
-        {
-            printf("\e[1;35m%s\e[0m:\n", file->d_name);
-            FILE *f = fopen(path_, "rb");
-            char word[256] = {0};
-            int q = 0, cnt = 0;
-            fprintf(out, "'%s' In file '%s':\n", shablon, path_);
-            while (fgets(word, 256, f) != NULL)
-            {
-                q++;
-                int k = seek_substring_KMP(word, shablon);
-                for (int i = 0; i < strlen(word); i++)
-                {
-                    int flag = 0;
-                    if (i == k)
-                    {
-                        fprintf(out, "Ln %d, Col %d\n", q, k + 1);
-                        printf("\e[1;32;4m");
-                        for (int j = k; j < k + strlen(shablon); j++)
-                            putchar(word[j]);
-                        printf("\e[0m");
-                        i += strlen(shablon);
-                        cnt++;
-                        // printf("\nk before = %d", k);
-                        int t = seek_substring_KMP(word + k + 1, shablon);
-                        // printf("\tt = %d\n", t);
-                        if (t != -1)
-                        {
-                            k += t + 1;
-                        }
-                        if (t == (strlen(shablon) - 1))
-                        {
-                            // k += 1;
-                            i--;
-                            flag = 1;
-                        }
-
-                        // printf(" i = %d k = %d t = %d\n", i, k, t);
-                    }
-                    if (flag == 0)
-                        putchar(word[i]);
+    printf("\e[1;35m%s\e[0m:\n", name);
+    FILE* f = fopen(path, "rb");
+    char word[256] = {0};
+    int q = 0, cnt = 0;
+    log_write(MESSAGE, "'%s' In file '%s':\n", pattern, path);
+    while (fgets(word, 256, f) != NULL) {
+        q++;
+        int k = seek_substring_KMP(word, pattern);
+        for (int i = 0; i < strlen(word); i++) {
+            int flag = 0;
+            if (i == k) {
+                log_write(MESSAGE, "Ln %d, Col %d\n", q, k + 1);
+                printf("\e[1;32;4m");
+                for (int j = k; j < k + strlen(pattern); j++)
+                    putchar(word[j]);
+                printf("\e[0m");
+                i += strlen(pattern);
+                cnt++;
+                int t = seek_substring_KMP(word + k + 1, pattern);
+                if (t != -1) {
+                    k += t + 1;
+                }
+                if (t == (strlen(pattern) - 1)) {
+                    // k += 1;
+                    i--;
+                    flag = 1;
                 }
             }
-            printf("\n");
-            // fprintf(out, "\n");
-            if (cnt == 0)
-                fprintf(out, "No results found\n");
-            fclose(f);
+            if (flag == 0)
+                putchar(word[i]);
+        }
+    }
+    printf("\n");
+
+    if (cnt == 0)
+        log_write(MESSAGE, "No results found\n");
+    fclose(f);
+}
+
+gint my_comparator(gconstpointer item1, gconstpointer item2)
+{
+    return g_ascii_strcasecmp(item1, item2);
+}
+
+void process_dirs_r(char* path, char* pattern)
+{
+    DIR* dir = opendir(path);
+    if (!dir) {
+        printf("\e[1;31mОшибка\e[0m: не удалось открыть директорию %s\n", path);
+        return;
+    }
+    printf("in dir \e[1;34m%s\e[0m:\n", path);
+    struct dirent* file;
+    GList* dir_list = NULL;
+
+    while ((file = readdir(dir)) != NULL) {
+        if (strcmp(file->d_name, ".") == 0)
+            continue;
+        else if (strcmp(file->d_name, "..") == 0)
+            continue;
+
+        char* file_path = malloc(sizeof(char) * MAX_LEN);
+        strncpy(file_path, path, MAX_LEN);
+        strcat(file_path, "/");
+        strncat(file_path, file->d_name, MAX_LEN);
+        if ((file->d_type & DT_DIR) == DT_DIR) {
+            dir_list = g_list_append(dir_list, file_path);
+        } else if ((file->d_type & DT_REG) == DT_REG) {
+            process_file(file_path, pattern, file->d_name);
         }
     }
 
-    printf("\n\n");
-    traverse(&dir_list, print_name, shablon, out);
+    dir_list = g_list_sort(dir_list, my_comparator);
+    for (GList* i = dir_list; i != NULL; i = i->next) {
+        printf("\n");
+        process_dirs_r((char*)i->data, pattern);
+    }
+    closedir(dir);
+    g_list_free(dir_list);
 }
 
-int main(int argc, char *argv[])
+void log_write(int status, char* format, ...)
 {
-
-    if (argc == 3)
-    {
-        FILE *out = fopen("log.log", "a+");
-        struct tm *ptr;
-        time_t lt;
-        lt = time(NULL);
-        ptr = localtime(&lt);
-        char buf[64] = {0};
-        strftime(buf, 64, "%d %b %Y %H:%M:%S", ptr);
+    FILE* out = fopen("logs/log.log", "a+");
+    if (status == TIME) {
+        struct tm* date;
+        time_t ltime;
+        ltime = time(NULL);
+        date = localtime(&ltime);
+        char buf[30] = {0};
+        strftime(buf, 30, "%d %b %Y %H:%M:%S", date);
         fprintf(out, "[%s]\n", buf);
-        printf("in dir \e[1;34m%s\e[0m:\n", argv[1]);
-        read_dir(argv[1], argv[2], out);
-        fprintf(out, "\n");
-        fclose(out);
+    } else {
+        va_list arg_ptr;
+        va_start(arg_ptr, format);
+        char buffer[MAX_MESSAGE_LEN];
+        vsnprintf(buffer, MAX_MESSAGE_LEN, format, arg_ptr);
+        fprintf(out, "%s", buffer);
+        va_end(arg_ptr);
     }
-    else
-    {
+
+    fclose(out);
+}
+
+int main(int argc, char* argv[])
+{
+    if (argc == 3) {
+        log_write(TIME, NULL);
+        process_dirs_r(argv[1], argv[2]);
+        log_write(MESSAGE, "\n\n");
+    } else {
         printf("Usage:\n%s <dir> <match>\n", argv[0]);
     }
 
