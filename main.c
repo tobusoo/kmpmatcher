@@ -16,38 +16,44 @@
 
 void log_write(int status, char* format, ...);
 
+void highlite_word(char* str, int col, size_t str_len)
+{
+    printf("\e[1;32;4m");
+    for (int j = col; j < str_len; j++) {
+        putchar(str[j]);
+        log_write(MESSAGE, "%c", str[j]);
+    }
+    printf("\e[0m");
+}
+
 void process_file(char* path, char* pattern, char* name)
 {
-    printf("\e[1;35m%s\e[0m:\n", name);
     FILE* f = fopen(path, "rb");
-    char word[256] = {0};
-    int q = 0, cnt = 0;
+    char word[MAX_LEN * 4] = {0};
+    int line = 0;
+    int cnt = 0;
+    int len = 0, col = 0;
+
+    printf("\e[1;35m%s\e[0m:\n", name);
     log_write(MESSAGE, "'%s' In file '%s':\n", pattern, path);
-    while (fgets(word, 256, f) != NULL) {
-        q++;
-        int k = seek_substring_KMP(word, pattern);
-        for (int i = 0; i < strlen(word); i++) {
-            int flag = 0;
-            if (i == k) {
-                log_write(MESSAGE, "Ln %d, Col %d\n", q, k + 1);
-                printf("\e[1;32;4m");
-                for (int j = k; j < k + strlen(pattern); j++)
-                    putchar(word[j]);
-                printf("\e[0m");
-                i += strlen(pattern);
-                cnt++;
-                int t = seek_substring_KMP(word + k + 1, pattern);
-                if (t != -1) {
-                    k += t + 1;
-                }
-                if (t == (strlen(pattern) - 1)) {
-                    // k += 1;
-                    i--;
-                    flag = 1;
-                }
-            }
-            if (flag == 0)
+
+    while (fgets(word, MAX_LEN * 4, f) != NULL) {
+        size_t word_size = strlen(word);
+        line++;
+        col = seek_substring_KMP(word, pattern, &len);
+
+        for (int i = 0; i < word_size; i++) {
+            if (i == col) {
+                log_write(MESSAGE, "Ln %d, Col %d word: ", line, col + 1);
+                highlite_word(word, col, col + len);
+                log_write(MESSAGE, "\n");
+
+                i = len + col - 1;
+                col = seek_substring_KMP(word + i, pattern, &len) + i;
+
+            } else {
                 putchar(word[i]);
+            }
         }
     }
     printf("\n");
@@ -102,20 +108,25 @@ void process_dirs_r(char* path, char* pattern)
 void log_write(int status, char* format, ...)
 {
     FILE* out = fopen("logs/log.log", "a+");
+
     if (status == TIME) {
         struct tm* date;
         time_t ltime;
+        char buf[30] = {0};
+
         ltime = time(NULL);
         date = localtime(&ltime);
-        char buf[30] = {0};
+
         strftime(buf, 30, "%d %b %Y %H:%M:%S", date);
         fprintf(out, "[%s]\n", buf);
     } else {
         va_list arg_ptr;
         va_start(arg_ptr, format);
         char buffer[MAX_MESSAGE_LEN];
+
         vsnprintf(buffer, MAX_MESSAGE_LEN, format, arg_ptr);
         fprintf(out, "%s", buffer);
+
         va_end(arg_ptr);
     }
 
@@ -125,6 +136,7 @@ void log_write(int status, char* format, ...)
 int main(int argc, char* argv[])
 {
     if (argc == 3) {
+        printf("%s\n", argv[2]);
         log_write(TIME, NULL);
         process_dirs_r(argv[1], argv[2]);
         log_write(MESSAGE, "\n\n");
