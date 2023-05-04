@@ -26,31 +26,42 @@ void highlite_word(char* str, int col, size_t str_len)
     printf("\e[0m");
 }
 
+char* get_suffix(char* file_name)
+{
+    while (*file_name != '\0') {
+        if (*file_name == '.')
+            return file_name;
+        file_name++;
+    }
+
+    return NULL;
+}
+
 void process_file(char* path, char* pattern, char* name)
 {
     FILE* f = fopen(path, "rb");
     char word[MAX_LEN * 4] = {0};
-    int line = 0;
-    int cnt = 0;
-    int len = 0, col = 0;
+    int cnt = 0, len = 0, line = 0, column = 0;
 
     printf("\e[1;35m%s\e[0m:\n", name);
-    log_write(MESSAGE, "'%s' In file '%s':\n", pattern, path);
+    log_write(MESSAGE, "In file '%s':\n", path);
 
     while (fgets(word, MAX_LEN * 4, f) != NULL) {
         size_t word_size = strlen(word);
         line++;
-        col = seek_substring_KMP(word, pattern, &len);
+        column = seek_substring_KMP(word, pattern, &len);
 
         for (int i = 0; i < word_size; i++) {
-            if (i == col) {
-                log_write(MESSAGE, "Ln %d, Col %d word: ", line, col + 1);
-                highlite_word(word, col, col + len);
-                log_write(MESSAGE, "\n");
+            if (i == column) {
+                cnt++;
+                log_write(MESSAGE, "Ln %d, Col %d word: \"", line, column + 1);
+                highlite_word(word, column, column + len);
+                log_write(MESSAGE, "\"\n");
 
-                i = len + col - 1;
-                col = seek_substring_KMP(word + i, pattern, &len) + i;
-
+                i = len + column;
+                column = seek_substring_KMP(word + i, pattern, &len) + i;
+                i--;
+                // printf("\ni = %d col = %d\n", i, col);
             } else {
                 putchar(word[i]);
             }
@@ -80,10 +91,19 @@ void process_dirs_r(char* path, char* pattern)
     GList* dir_list = NULL;
 
     while ((file = readdir(dir)) != NULL) {
+        char* name = get_suffix(file->d_name);
         if (strcmp(file->d_name, ".") == 0)
             continue;
         else if (strcmp(file->d_name, "..") == 0)
             continue;
+        else if (
+                name != NULL && strcmp(name, ".txt") != 0
+                && (file->d_type & DT_REG) == DT_REG) {
+            printf("\e[1;33m[INFO]\e[0m Skipped file \e[1;35m%s\e[0m\n",
+                   file->d_name);
+            log_write(MESSAGE, "[INFO] Skipped file \"%s\"\n", file->d_name);
+            continue;
+        }
 
         char* file_path = malloc(sizeof(char) * MAX_LEN);
         strncpy(file_path, path, MAX_LEN);
@@ -92,6 +112,13 @@ void process_dirs_r(char* path, char* pattern)
         if ((file->d_type & DT_DIR) == DT_DIR) {
             dir_list = g_list_append(dir_list, file_path);
         } else if ((file->d_type & DT_REG) == DT_REG) {
+            if (name == NULL) {
+                printf("\e[1;33m[INFO]\e[0m Skipped file \e[1;35m%s\e[0m\n",
+                       file->d_name);
+                log_write(
+                        MESSAGE, "[INFO] Skipped file \"%s\"\n", file->d_name);
+                continue;
+            }
             process_file(file_path, pattern, file->d_name);
         }
     }
@@ -136,8 +163,9 @@ void log_write(int status, char* format, ...)
 int main(int argc, char* argv[])
 {
     if (argc == 3) {
-        printf("%s\n", argv[2]);
+        printf("Searching \e[1;32m\"%s\"\e[0m...\n\n", argv[2]);
         log_write(TIME, NULL);
+        log_write(MESSAGE, "Searching for \"%s\"\n", argv[2]);
         process_dirs_r(argv[1], argv[2]);
         log_write(MESSAGE, "\n\n");
     } else {
