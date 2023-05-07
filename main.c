@@ -47,7 +47,7 @@ void process_file(char* path, char* pattern, char* name)
     int cnt = 0, len = 0, line = 0, column = 0;
 
     printf("\e[1;35m%s\e[0m:\n", name);
-    log_write(MESSAGE, "In file '%s':\n", path);
+    log_write(MESSAGE, "In file \"%s\":\n", name);
 
     while (fgets(word, MAX_LEN * 4, file) != NULL) {
         size_t word_size = strlen(word);
@@ -94,6 +94,27 @@ char* get_path(char* path, char* name)
     return file_path;
 }
 
+int skipp_file(struct dirent* file)
+{
+    char* suffix = get_suffix(file->d_name);
+
+    if (strcmp(file->d_name, ".") == 0)
+        return -1;
+
+    if (strcmp(file->d_name, "..") == 0)
+        return -1;
+
+    if ((suffix == NULL || strcmp(suffix, ".txt") != 0)
+        && (file->d_type & DT_REG) == DT_REG) {
+        printf("\e[1;33m[INFO]\e[0m Skipped file \e[1;35m%s\e[0m\n",
+               file->d_name);
+        log_write(MESSAGE, "[INFO] Skipped file \"%s\"\n", file->d_name);
+        return 1;
+    }
+
+    return 0;
+}
+
 void process_dirs(char* pattern, char* path, int is_recursive)
 {
     DIR* dir = opendir(path);
@@ -103,22 +124,18 @@ void process_dirs(char* pattern, char* path, int is_recursive)
         return;
     }
 
-    printf("in dir \e[1;34m%s\e[0m:\n", path);
+    printf("In dir \e[1;34m%s\e[0m:\n", path);
+    log_write(MESSAGE, "In dir \"%s\":\n", path);
     struct dirent* file;
     GList* dir_list = NULL;
+    int file_cnt = 0;
 
     while ((file = readdir(dir)) != NULL) {
-        char* name = get_suffix(file->d_name);
-        if (strcmp(file->d_name, ".") == 0)
+        int is_skipp = skipp_file(file);
+        if (is_skipp == -1) {
             continue;
-        else if (strcmp(file->d_name, "..") == 0)
-            continue;
-        else if (
-                name != NULL && strcmp(name, ".txt") != 0
-                && (file->d_type & DT_REG) == DT_REG) {
-            printf("\e[1;33m[INFO]\e[0m Skipped file \e[1;35m%s\e[0m\n",
-                   file->d_name);
-            log_write(MESSAGE, "[INFO] Skipped file \"%s\"\n", file->d_name);
+        } else if (is_skipp == 1) {
+            file_cnt++;
             continue;
         }
 
@@ -127,14 +144,13 @@ void process_dirs(char* pattern, char* path, int is_recursive)
         if ((file->d_type & DT_DIR) == DT_DIR) {
             dir_list = g_list_append(dir_list, file_path);
         } else if ((file->d_type & DT_REG) == DT_REG) {
-            if (name == NULL) {
-                printf("\e[1;33m[INFO]\e[0m Skipped file \e[1;35m%s\e[0m\n",
-                       file->d_name);
-                log_write(MESSAGE, "[INFO] Skipped file \"%s\"\n", file_path);
-                continue;
-            }
             process_file(file_path, pattern, file->d_name);
         }
+    }
+
+    if (file_cnt == 0) {
+        printf("\e[1;33m[INFO]\e[0m Empty directory\n");
+        log_write(MESSAGE, "[INFO] Empty directory\n");
     }
 
     if (is_recursive) {
