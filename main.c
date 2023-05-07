@@ -201,8 +201,9 @@ int main(int argc, char* argv[])
             print_usage_message(argv[0]);
     }
 
-    printf("Searching for \"\e[1;32m%s\e[0m\"\n\n", pattern);
     log_write(TIME, NULL);
+
+    printf("Searching for \"\e[1;32m%s\e[0m\"\n\n", pattern);
     log_write(MESSAGE, "Searching for \"%s\"\n", pattern);
 
     process_dirs(pattern, directory, is_recursive);
