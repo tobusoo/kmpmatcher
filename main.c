@@ -14,6 +14,9 @@
 #define MAX_LEN 260
 #define MAX_MESSAGE_LEN 1024
 
+#define NOT_RECURSIVE 0
+#define RECURSIVE 1
+
 void log_write(int status, char* format, ...);
 
 void highlite_word(char* str, int col, size_t str_len)
@@ -39,14 +42,14 @@ char* get_suffix(char* file_name)
 
 void process_file(char* path, char* pattern, char* name)
 {
-    FILE* f = fopen(path, "rb");
+    FILE* file = fopen(path, "rb");
     char word[MAX_LEN * 4] = {0};
     int cnt = 0, len = 0, line = 0, column = 0;
 
     printf("\e[1;35m%s\e[0m:\n", name);
     log_write(MESSAGE, "In file '%s':\n", path);
 
-    while (fgets(word, MAX_LEN * 4, f) != NULL) {
+    while (fgets(word, MAX_LEN * 4, file) != NULL) {
         size_t word_size = strlen(word);
         line++;
         column = seek_substring_KMP(word, pattern, &len);
@@ -61,7 +64,6 @@ void process_file(char* path, char* pattern, char* name)
                 i = len + column;
                 column = seek_substring_KMP(word + i, pattern, &len) + i;
                 i--;
-                // printf("\ni = %d col = %d\n", i, col);
             } else {
                 putchar(word[i]);
             }
@@ -71,12 +73,25 @@ void process_file(char* path, char* pattern, char* name)
 
     if (cnt == 0)
         log_write(MESSAGE, "No results found\n");
-    fclose(f);
+
+    free(path);
+    fclose(file);
 }
 
 gint my_comparator(gconstpointer item1, gconstpointer item2)
 {
     return g_ascii_strcasecmp(item1, item2);
+}
+
+char* get_path(char* path, char* name)
+{
+    char* file_path = malloc(sizeof(char) * MAX_LEN);
+
+    strncpy(file_path, path, MAX_LEN);
+    strcat(file_path, "/");
+    strncat(file_path, name, MAX_LEN);
+
+    return file_path;
 }
 
 void process_dirs(char* pattern, char* path, int is_recursive)
@@ -87,6 +102,7 @@ void process_dirs(char* pattern, char* path, int is_recursive)
         log_write(MESSAGE, "[ERROR] can't open \"%s\" directory\n", path);
         return;
     }
+
     printf("in dir \e[1;34m%s\e[0m:\n", path);
     struct dirent* file;
     GList* dir_list = NULL;
@@ -106,10 +122,8 @@ void process_dirs(char* pattern, char* path, int is_recursive)
             continue;
         }
 
-        char* file_path = malloc(sizeof(char) * MAX_LEN);
-        strncpy(file_path, path, MAX_LEN);
-        strcat(file_path, "/");
-        strncat(file_path, file->d_name, MAX_LEN);
+        char* file_path = get_path(path, file->d_name);
+
         if ((file->d_type & DT_DIR) == DT_DIR) {
             dir_list = g_list_append(dir_list, file_path);
         } else if ((file->d_type & DT_REG) == DT_REG) {
@@ -125,13 +139,15 @@ void process_dirs(char* pattern, char* path, int is_recursive)
 
     if (is_recursive) {
         dir_list = g_list_sort(dir_list, my_comparator);
+
         for (GList* i = dir_list; i != NULL; i = i->next) {
             printf("\n");
             process_dirs(pattern, (char*)i->data, 1);
         }
-        closedir(dir);
-        g_list_free(dir_list);
     }
+
+    closedir(dir);
+    g_list_free_full(dir_list, free);
 }
 
 void log_write(int status, char* format, ...)
@@ -170,7 +186,7 @@ void print_usage_message(char* app_name)
 
 int main(int argc, char* argv[])
 {
-    int is_recursive = 0;
+    int is_recursive = NOT_RECURSIVE;
     char* directory = argv[2];
     char* pattern = argv[1];
 
@@ -178,19 +194,19 @@ int main(int argc, char* argv[])
         print_usage_message(argv[0]);
     } else if (strcmp(argv[1], "-r") == 0) {
         if (argc == 4) {
-            is_recursive = 1;
+            is_recursive = RECURSIVE;
             directory = argv[3];
             pattern = argv[2];
         } else
             print_usage_message(argv[0]);
     }
 
-    // printf("%s %s %d\n", pattern, directory, is_recursive);
-
     printf("Searching for \"\e[1;32m%s\e[0m\"\n\n", pattern);
     log_write(TIME, NULL);
     log_write(MESSAGE, "Searching for \"%s\"\n", pattern);
+
     process_dirs(pattern, directory, is_recursive);
+
     log_write(MESSAGE, "\n\n");
 
     return 0;
