@@ -31,7 +31,6 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
 
     int* pi = prefix_func(pattern, pattern_len);
 
-    // printf("skip\n");
     for (i = 0, j = 0; i < text_len; i++) {
         // printf("%c %c\n", text[i], pattern[j]);
         while (j > 0 && pattern[j] != text[i] && pattern[j] != '.'
@@ -47,39 +46,30 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
                 j = pi[j - 1];
             }
         } else if (pattern[j + 1] == '*') {
-            int c = i;
-            // printf("\n%d %d %d\n", i, j, k);
-            // printf("%c %c\n", text[i], pattern[j]);
+            int i_before = i;
             if (pattern[j] == '.') {
                 while (text[i] != pattern[j + 2]) {
                     i++;
                     k++;
-                    // printf("tochka %c %c\n", text[i], pattern[j + 2]);
                 }
             } else {
-                // printf("befor in %c %c\n", text[i], pattern[j + 2]);
                 while (text[i] == pattern[j]) {
-                    // printf("in %c %c\n", text[i], pattern[j + 2]);
                     i++;
                     k++;
                 }
             }
             j += 2;
-            // printf("pattern_len = %ld j = %d\n", pattern_len, j);
-            if (c == i && text[i] != pattern[j] && j + 1 >= pattern_len) {
-                // i++;
+            if (i_before == i && text[i] != pattern[j]
+                && j + 1 >= pattern_len) {
                 j = pi[j - 1];
                 k = 0;
-                // printf("fux\n");
-                // continue;
             } else {
                 i--;
                 k -= 2;
             }
-            // printf("%d %d %d\n", i, j, k);
         } else if (pattern[j] == text[i] || pattern[j] == '.')
             j++;
-        if (j >= pattern_len) {
+        if (j == pattern_len) {
             free(pi);
             *len = j + k;
             return i - j - k + 1;

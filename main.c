@@ -79,11 +79,12 @@ gint my_comparator(gconstpointer item1, gconstpointer item2)
     return g_ascii_strcasecmp(item1, item2);
 }
 
-void process_dirs_r(char* path, char* pattern)
+void process_dirs(char* pattern, char* path, int is_recursive)
 {
     DIR* dir = opendir(path);
     if (!dir) {
-        printf("\e[1;31mОшибка\e[0m: не удалось открыть директорию %s\n", path);
+        printf("\e[1;31mError\e[0m: can't open \"%s\" directory\n", path);
+        log_write(MESSAGE, "[ERROR] can't open \"%s\" directory\n", path);
         return;
     }
     printf("in dir \e[1;34m%s\e[0m:\n", path);
@@ -115,21 +116,22 @@ void process_dirs_r(char* path, char* pattern)
             if (name == NULL) {
                 printf("\e[1;33m[INFO]\e[0m Skipped file \e[1;35m%s\e[0m\n",
                        file->d_name);
-                log_write(
-                        MESSAGE, "[INFO] Skipped file \"%s\"\n", file->d_name);
+                log_write(MESSAGE, "[INFO] Skipped file \"%s\"\n", file_path);
                 continue;
             }
             process_file(file_path, pattern, file->d_name);
         }
     }
 
-    dir_list = g_list_sort(dir_list, my_comparator);
-    for (GList* i = dir_list; i != NULL; i = i->next) {
-        printf("\n");
-        process_dirs_r((char*)i->data, pattern);
+    if (is_recursive) {
+        dir_list = g_list_sort(dir_list, my_comparator);
+        for (GList* i = dir_list; i != NULL; i = i->next) {
+            printf("\n");
+            process_dirs(pattern, (char*)i->data, 1);
+        }
+        closedir(dir);
+        g_list_free(dir_list);
     }
-    closedir(dir);
-    g_list_free(dir_list);
 }
 
 void log_write(int status, char* format, ...)
@@ -160,17 +162,36 @@ void log_write(int status, char* format, ...)
     fclose(out);
 }
 
+void print_usage_message(char* app_name)
+{
+    printf("Usage:\n%s [-r] <match> <dir>\n", app_name);
+    exit(EXIT_FAILURE);
+}
+
 int main(int argc, char* argv[])
 {
-    if (argc == 3) {
-        printf("Searching \e[1;32m\"%s\"\e[0m...\n\n", argv[2]);
-        log_write(TIME, NULL);
-        log_write(MESSAGE, "Searching for \"%s\"\n", argv[2]);
-        process_dirs_r(argv[1], argv[2]);
-        log_write(MESSAGE, "\n\n");
-    } else {
-        printf("Usage:\n%s <dir> <match>\n", argv[0]);
+    int is_recursive = 0;
+    char* directory = argv[2];
+    char* pattern = argv[1];
+
+    if (argc != 4 && argc != 3) {
+        print_usage_message(argv[0]);
+    } else if (strcmp(argv[1], "-r") == 0) {
+        if (argc == 4) {
+            is_recursive = 1;
+            directory = argv[3];
+            pattern = argv[2];
+        } else
+            print_usage_message(argv[0]);
     }
+
+    // printf("%s %s %d\n", pattern, directory, is_recursive);
+
+    printf("Searching for \"\e[1;32m%s\e[0m\"\n\n", pattern);
+    log_write(TIME, NULL);
+    log_write(MESSAGE, "Searching for \"%s\"\n", pattern);
+    process_dirs(pattern, directory, is_recursive);
+    log_write(MESSAGE, "\n\n");
 
     return 0;
 }
