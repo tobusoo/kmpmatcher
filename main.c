@@ -158,7 +158,7 @@ void process_dirs(char* pattern, char* path, int is_recursive)
 
         for (GList* i = dir_list; i != NULL; i = i->next) {
             printf("\n");
-            process_dirs(pattern, (char*)i->data, 1);
+            process_dirs(pattern, (char*)i->data, RECURSIVE);
         }
     }
 
