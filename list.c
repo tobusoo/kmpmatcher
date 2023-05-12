@@ -39,6 +39,7 @@ static void swap(List* l1, List* l2)
     l2->string = temp;
 }
 
+// selection sort 🙂
 void list_sort(List* list)
 {
     List* min;
