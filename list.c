@@ -55,7 +55,7 @@ void list_select_sort(List* list)
 	char* temp;
 	for (List* i = list; i != NULL; i = i->next) {
 		List* min = i;
-		while (List j = i->next; j != NULL; j = j->next) {
+		while (List* j = i->next; j != NULL; j = j->next) {
 			if (cmp(j->string, min)) {
 				min = j;
 			}
