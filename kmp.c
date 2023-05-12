@@ -33,22 +33,19 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
 
     int flag = 0;
     for (i = 0, j = 0; i < text_len; i++) {
-        // printf("    %c     %c\n", text[i], pattern[j]);
-        // printf("i = %d j = %d k = %d\n", i, j, k);
         while (j > 0 && pattern[j] != text[i] && pattern[j] != '.'
                && pattern[j + 1] != '*' && pattern[j] != '\\') {
             j = pi[j - 1];
             k = 0;
             flag = 0;
         }
+        // а что если два символа подряд шо делать?
         if (pattern[j] == '\\' && pattern[j - 1] != '\\') {
             flag = 1;
             j++;
             k--;
             i--;
         } else if (pattern[j + 1] == '*') {
-            // printf("before  %c     %c\n", text[i], pattern[j]);
-            // printf("    i = %d j = %d k = %d\n", i, j, k);
             int i_before = i;
             if (pattern[j] == '.' && flag == 0) {
                 while (text[i] != pattern[j + 2]) {
@@ -61,46 +58,28 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
                     k++;
                 }
             }
-            // printf("here we go again\n");
-            j += 2;
-            if (i_before == i) {
-                int sad = 0;
-                if (j == pattern_len) {
-                    k -= 2;
-                    i--;
-                } else {
-                    int l;
-                    for (l = j; l < pattern_len; l++) {
-                        printf("here l = %c\n", pattern[l]);
-                        if (text[i] == pattern[l] && pattern[l + 1] == '*') {
-                            sad = 1;
-                            printf("sad!\n");
-                            break;
-                        }
-                        // printf("i = %c l = %c l+1 = %c\n",
-                        //        text[i],
-                        //        pattern[l],
-                        //        pattern[l + 1]);
-                    }
-                    // printf("ho    i = %d j = %d k = %d\n", i, j, k);
-                    if (j != 0 && j != 2 && !sad) { // до ума довести
-                        j = pattern_len;
-                        k = -pattern_len + 1;
-                        i++;
-                    } else if (sad) {
-                        j = l + 2;
-                        k += l - 2;
-                    } else {
-                        j = pi[j - 1];
-                        k = 0;
-                    }
+            int l = 0;
+            for (l = j; l < pattern_len; l++) {
+                if (text[i] != pattern[l] && pattern[j + 1] != '*') {
+                    l = 0;
+                    break;
+                } else if (text[i] == pattern[l]) {
+                    break;
                 }
-            } else {
-                i--;
-                k -= 2;
             }
-            // printf("after   %c     %c\n", text[i], pattern[j]);
-            // printf("    i = %d j = %d k = %d\n", i, j, k);
+            l = l == pattern_len ? 0 : l;
+            if (i_before == i && j == 0 && l == 0) {
+                i++;
+                j -= 2;
+                k += 2;
+            } else if (i_before == i && j == 0 && l != 0) {
+                j = l;
+                k -= l - 1;
+                i++;
+            }
+            j += 2;
+            i--;
+            k -= 2;
         } else if (pattern[j] == text[i] || (pattern[j] == '.' && flag == 0))
             j++;
         if (j == pattern_len) {
@@ -118,7 +97,7 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
 // {
 //     if (argc != 1)
 //         printf("%s\n", argv[1]);
-//     char text[] = "Let's imagine";
+//     char text[] = "    n";
 
 //     char pattern1[] = "r*e*t*u*r*n*";
 //     // char pattern2[] = "usa*o";

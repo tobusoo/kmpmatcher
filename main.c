@@ -40,16 +40,27 @@ char* get_suffix(char* file_name)
     return NULL;
 }
 
+char* skip_space(char* str)
+{
+    char* temp = str;
+    while (*temp == ' ') {
+        temp++;
+    }
+
+    return temp;
+}
+
 void process_file(char* path, char* pattern, char* name)
 {
     FILE* file = fopen(path, "rb");
-    char word[MAX_LEN * 4] = {0};
+    char* word = malloc(sizeof(char) * MAX_LEN * 4);
     int cnt = 0, len = 0, line = 0, column = 0;
 
     printf("\e[1;35m%s\e[0m:\n", name);
     log_write(MESSAGE, "In file \"%s\":\n", name);
 
     while (fgets(word, MAX_LEN * 4, file) != NULL) {
+        // word = skip_space(word);
         size_t word_size = strlen(word);
         line++;
         column = seek_substring_KMP(word, pattern, &len);
@@ -62,6 +73,7 @@ void process_file(char* path, char* pattern, char* name)
                 log_write(MESSAGE, "\"\n");
 
                 i = len + column;
+                // word = skip_space(word);
                 column = seek_substring_KMP(word + i, pattern, &len) + i;
                 i--;
             } else {
@@ -74,6 +86,7 @@ void process_file(char* path, char* pattern, char* name)
     if (cnt == 0)
         log_write(MESSAGE, "No results found\n");
 
+    free(word);
     free(path);
     fclose(file);
 }
@@ -213,7 +226,6 @@ int main(int argc, char* argv[])
     }
 
     log_write(TIME, NULL);
-
     printf("Searching for \"\e[1;32m%s\e[0m\"\n\n", pattern);
     log_write(MESSAGE, "Searching for \"%s\"\n", pattern);
 
