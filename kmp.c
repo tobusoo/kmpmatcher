@@ -39,7 +39,6 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
             k = 0;
             flag = 0;
         }
-        // а что если два символа подряд шо делать?
         if (pattern[j] == '\\' && pattern[j - 1] != '\\') {
             flag = 1;
             j++;
