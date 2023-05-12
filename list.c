@@ -21,6 +21,7 @@ void list_delete(List* list)
     List* next;
     while (list != NULL) {
         next = list->next;
+        free(list->string);
         free(list);
         list = next;
     }
