@@ -50,7 +50,7 @@ void swap(List** l1, List** l2)
 	*l2 = temp;
 }
 
-void list_sort(List* list)
+void list_select_sort(List* list)
 {
 	char* temp;
 	for (List* i = list; i != NULL; i = i->next) {
