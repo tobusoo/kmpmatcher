@@ -1,5 +1,4 @@
 #include <dirent.h>
-#include <glib.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +7,7 @@
 #include <time.h>
 
 #include "kmp.h"
+#include "list.h"
 
 #define TIME 0
 #define MESSAGE 1
@@ -78,11 +78,6 @@ void process_file(char* path, char* pattern, char* name)
     fclose(file);
 }
 
-gint my_comparator(gconstpointer item1, gconstpointer item2)
-{
-    return g_ascii_strcasecmp(item1, item2);
-}
-
 char* get_path(char* path, char* name)
 {
     char* file_path = malloc(sizeof(char) * MAX_LEN);
@@ -127,7 +122,7 @@ void process_dirs(char* pattern, char* path, int is_recursive)
     printf("In dir \e[1;34m%s\e[0m:\n", path);
     log_write(MESSAGE, "In dir \"%s\":\n", path);
     struct dirent* file;
-    GList* dir_list = NULL;
+    List* dir_list = NULL;
     int file_cnt = 0;
 
     while ((file = readdir(dir)) != NULL) {
@@ -142,7 +137,7 @@ void process_dirs(char* pattern, char* path, int is_recursive)
         char* file_path = get_path(path, file->d_name);
 
         if ((file->d_type & DT_DIR) == DT_DIR) {
-            dir_list = g_list_append(dir_list, file_path);
+            dir_list = list_add(dir_list, file_path);
         } else if ((file->d_type & DT_REG) == DT_REG) {
             process_file(file_path, pattern, file->d_name);
         }
@@ -154,16 +149,16 @@ void process_dirs(char* pattern, char* path, int is_recursive)
     }
 
     if (is_recursive) {
-        dir_list = g_list_sort(dir_list, my_comparator);
+        list_sort(dir_list);
 
-        for (GList* i = dir_list; i != NULL; i = i->next) {
+        for (List* i = dir_list; i != NULL; i = i->next) {
             printf("\n");
-            process_dirs(pattern, (char*)i->data, RECURSIVE);
+            process_dirs(pattern, i->string, RECURSIVE);
         }
     }
 
     closedir(dir);
-    g_list_free_full(dir_list, free);
+    list_delete(dir_list);
 }
 
 void log_write(int status, char* format, ...)
