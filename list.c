@@ -26,12 +26,12 @@ void list_delete(List* list)
     }
 }
 
-int cmp(char* s1, char* s2)
+static int cmp(char* s1, char* s2)
 {
     return strcmp(s1, s2) < 0;
 }
 
-void swap(List* l1, List* l2)
+static void swap(List* l1, List* l2)
 {
     char* temp = l1->string;
     l1->string = l2->string;
