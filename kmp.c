@@ -33,7 +33,7 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
 
     int flag = 0;
     for (i = 0, j = 0; i < text_len; i++) {
-        printf("    %c     %c\n", text[i], pattern[j]);
+      printf("    %c     %c\n", text[i], pattern[j]);
         printf("i = %d j = %d k = %d\n", i, j, k);
         while (j > 0 && pattern[j] != text[i] && pattern[j] != '.'
                && pattern[j + 1] != '*' && pattern[j] != '\\') {
@@ -63,17 +63,18 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
             }
             // printf("here we go again\n");
             j += 2;
-            if (i_before == i && text[i] != pattern[j]) {
-                int fuck_it = 0;
+            if (i_before == i) {
+                int sad = 0;
                 if (j == pattern_len) {
                     k -= 2;
                     i--;
                 } else {
                     int l;
                     for (l = j; l < pattern_len; l++) {
+                    	printf("here l = %c\n", pattern[l]);
                         if (text[i] == pattern[l] && pattern[l + 1] == '*') {
-                            fuck_it = 1;
-                            // printf("we are fucked up!\n");
+                            sad = 1;
+                            printf("sad!\n");
                             break;
                         }
                         // printf("i = %c l = %c l+1 = %c\n",
@@ -81,12 +82,12 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
                         //        pattern[l],
                         //        pattern[l + 1]);
                     }
-                    printf("ho    i = %d j = %d k = %d\n", i, j, k);
-                    if (j != 0 && j != 2 && !fuck_it) { // до ума довести
+                   // printf("ho    i = %d j = %d k = %d\n", i, j, k);
+                    if (j != 0 && j != 2 && !sad) { // до ума довести
                         j = pattern_len;
                         k = -pattern_len + 1;
                         i++;
-                    } else if (fuck_it) {
+                    } else if (sad) {
                         j = l + 2;
                         k += l - 2;
                     } else {
@@ -99,7 +100,7 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
                 k -= 2;
             }
             printf("after   %c     %c\n", text[i], pattern[j]);
-            printf("    i = %d j = %d k = %d\n", i, j, k);
+           printf("    i = %d j = %d k = %d\n", i, j, k);
         } else if (pattern[j] == text[i] || (pattern[j] == '.' && flag == 0))
             j++;
         if (j == pattern_len) {
@@ -112,6 +113,7 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
     free(pi);
     return -1;
 }
+
 
 int main(int argc, char* argv[])
 {
@@ -149,4 +151,4 @@ int main(int argc, char* argv[])
     // printf("Index of '%s' %d len = %d\n", pattern7, index7, cnt7);
 
     return 0;
-}
+} 
