@@ -125,6 +125,11 @@ int skipp_file(struct dirent* file)
 
 void process_dirs(char* pattern, char* path, int is_recursive)
 {
+    if (strcmp(path, "..") == 0) {
+        printf("\e[1;31mERROR\e[0m: don't use \"%s\" directory\n", path);
+        log_write(MESSAGE, "[ERROR] don't use \"%s\" directory\n", path);
+        return;
+    }
     DIR* dir = opendir(path);
     if (!dir) {
         printf("\e[1;31mError\e[0m: can't open \"%s\" directory\n", path);
