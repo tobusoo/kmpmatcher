@@ -1,6 +1,6 @@
 *.a
 *.o
 *.d
-app
+kmpmatcher
 .vscode
 *.log

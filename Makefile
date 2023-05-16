@@ -1,14 +1,33 @@
-.PHONY: all logs
-all: app logs
+APP_NAME = kmpmatcher
 
+CFLAGS = -Wall -Werror -I src
+DEPSFLAGS = -MMD
+CC = gcc
+
+OBJ_DIR = obj
+SRC_DIR = src
+
+APP_SOURCES = $(wildcard $(SRC_DIR)/*.c)
+APP_OBJECTS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(APP_SOURCES))
+
+DEPS = $(APP_OBJECTS:.o=.d)
+
+.PHONY: all clean logs
+all: $(APP_NAME) logs
+
+-include $(DEPS)
+
+# LOGS
 logs:
-	mkdir -p logs 
+	mkdir -p logs
 
-kmp: kmp.c kmp.h
-	gcc -g -O0 -Wall -o test kmp.c
+# BUILD
+$(APP_NAME): $(APP_OBJECTS) 
+	$(CC) $(CFLAGS) -o $@ $^
 
-app: main.c kmp.c list.c
-	gcc -g -O0 -Wall -o app main.c kmp.c list.c
+$(OBJ_DIR)/%.o: %.c
+	$(CC) $(CFLAGS) $(DEPSFLAGS) -c -o $@ $< 
 
-clean: 
-	rm -rf app test logs
+# CLEAN
+clean:
+	$(RM) -r $(APP_NAME) $(OBJ_DIR)/$(SRC_DIR)/*.[od] logs

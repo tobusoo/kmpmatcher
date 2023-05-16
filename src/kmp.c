@@ -25,7 +25,7 @@ int* prefix_func(char pattern[], size_t size)
     return pi;
 }
 
-int seek_substring_KMP(char text[], char pattern[], int* len)
+int kmp_matcher(char text[], char pattern[], int* len)
 {
     int i, j, k = 0;
     size_t text_len = strlen(text);
