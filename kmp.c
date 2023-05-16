@@ -4,7 +4,7 @@
 
 int* prefix_func(char pattern[], size_t size)
 {
-    int* pi = (int*)malloc(size * sizeof(int));
+    int* pi = (int*)calloc(size, sizeof(int));
     pi[0] = 0;
     for (int i = 1, j = 0; i < size; i++) {
         if (pattern[j] == '*' || pattern[j] == '\\') {
@@ -12,10 +12,11 @@ int* prefix_func(char pattern[], size_t size)
             continue;
         }
 
-        while (j > 0 && pattern[j] != pattern[i] && pattern[j] != '.')
+        while (j > 0 && pattern[j] != pattern[i])
             j = pi[j - 1];
 
-        if (pattern[j] == pattern[i] || pattern[j] == '.')
+        if (pattern[j] == pattern[i]
+            || (pattern[j] == '.' && pattern[j + 1] != '*'))
             j++;
 
         pi[i] = j;
@@ -33,23 +34,25 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
 
     int flag = 0;
     for (i = 0, j = 0; i < text_len; i++) {
-        while (j > 0 && pattern[j] != text[i] && pattern[j] != '.'
-               && pattern[j + 1] != '*' && pattern[j] != '\\') {
+        while (j > 0 && pattern[j] != text[i] && (pattern[j] != '.' || flag)
+               && (pattern[j + 1] != '*' || flag)
+               && (pattern[j] != '\\' || flag)) {
             j = pi[j - 1];
             k = 0;
+            if (flag)
+                i++;
             flag = 0;
         }
-        // printf("    %c     %c\n", text[i], pattern[j]);
-        // printf("i = %d j = %d k = %d\n", i, j, k);
         if (pattern[j] == '\\' && pattern[j - 1] != '\\') {
-            flag = 1;
             j++;
             k--;
             i--;
+            if (pattern[j + 1] != '*')
+                flag = 1;
         } else if (pattern[j + 1] == '*') {
             int i_before = i;
             if (pattern[j] == '.' && flag == 0) {
-                while (text[i] != pattern[j + 2]) {
+                while (i < text_len && text[i] != pattern[j + 2]) {
                     i++;
                     k++;
                 }
@@ -61,50 +64,56 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
             }
             if (i == i_before) {
                 int l = 0;
-                int o = 0;
                 for (l = j; l < pattern_len; l++) {
-                    // printf("i = %c l = %c l + 1 = %c\n",
-                    //        text[i],
-                    //        pattern[l],
-                    //        pattern[l + 1]);
-                    if (text[i] != pattern[l] && pattern[l + 1] != '*') {
+                    if (pattern[l] == '\\' && pattern[l + 1] == text[i]) {
+                        l++;
+                        break;
+                    } else if (
+                            text[i] != pattern[l]
+                            && (pattern[l + 1] != '*' || pattern[l] == '\\')
+                            && pattern[l] != '.') {
                         l = 0;
-                        o = 0;
-                        // printf("break here text[i] != pattern[l] &&
-                        // pattern[l"
-                        //        "+ 1] != '*'\n");
                         break;
                     } else if (text[i] != pattern[l] && pattern[l + 1] == '*') {
                         l++;
-                        o++;
                         continue;
-                    } else if (text[i] == pattern[l]) {
-                        // printf("break here text[i] == pattern[l]\n");
+                    } else if (text[i] == pattern[l] || pattern[l] == '.') {
                         break;
                     }
                 }
                 l = l == pattern_len ? 0 : l;
-                // printf("l = %d\n", l);
                 if (l != 0) {
                     k -= l - j;
                     j = l;
                     i--;
                 } else if (l == 0 && j != 0) {
-                    k -= pattern_len - j;
-                    i--;
-                    j = pattern_len;
+                    int skip = 0;
+                    for (int jj = j; jj < pattern_len; jj++) {
+                        if (pattern[jj + 1] != '*' || pattern[jj] == '\\') {
+                            skip = 1;
+                            break;
+                        } else {
+                            jj++;
+                        }
+                    }
+                    if (skip) {
+                        j = 0;
+                        k = 0;
+                    } else {
+                        k -= pattern_len - j;
+                        i--;
+                        j = pattern_len;
+                    }
                 }
             } else {
                 j += 2;
                 i--;
                 k -= 2;
             }
-            // printf("after\n");
-            // printf("    %c     %c\n", text[i], pattern[j]);
-            // printf("i = %d j = %d k = %d\n", i, j, k);
-        } else if (pattern[j] == text[i] || (pattern[j] == '.' && flag == 0))
+        } else if (pattern[j] == text[i] || (pattern[j] == '.' && flag == 0)) {
             j++;
-        // printf("j = %d pattern_len = %ld\n", j, pattern_len);
+            flag = 0;
+        }
         if (j == pattern_len) {
             *len = j + k;
             return i - j - k + 1;
@@ -114,13 +123,31 @@ int seek_substring_KMP(char text[], char pattern[], int* len)
     return -1;
 }
 
+// r*e*t*u*r*n*\* OK
+// r*e*t*u*r*n*\\\\ OK
+// r*e*t*u*r*n*\. OK
+// r*e*t*u*\.r*n* OK
+// r*e*t*u*\*r*n* OK
+// r*e*t*\ur*n* OK
+// r*e*t*u*\\\\r*n* OK
+
+// r*e*t*u*\r*n* КОСТЫЛЬ СДЕЛАТЬ
+
+// r*e*t*u*r*n*\ ?
+// *refks ?
+// .*fd ?
+// fd.* ?
+
+// fd** ?
+// fd**d
+
 // int main(int argc, char* argv[])
 // {
 //     if (argc != 1)
 //         printf("%s\n", argv[1]);
-//     char text[] = "sadrrff";
+//     char text[] = "cou think it could ";
 //     printf("%s\n", text);
-//     char pattern1[] = "r*e*t*u*r*n*";
+//     char pattern1[] = ".*oul";
 //     // char pattern2[] = "usa*o";
 //     // char pattern3[] = "qu..k";
 //     // char pattern4[] = "lol\\*i";

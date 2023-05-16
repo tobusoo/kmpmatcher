@@ -17,6 +17,17 @@
 #define NOT_RECURSIVE 0
 #define RECURSIVE 1
 
+#define DEFAULT_COLOR "\e[0m"
+#define RED_COLOR "\e[1;31m"
+#define RED_COLOR_STR(string) "\e[1;31m" string DEFAULT_COLOR
+#define MAGENTA_COLOR_STR(string) "\e[1;35m" string DEFAULT_COLOR
+
+typedef enum {
+    FIRST_STAR,
+    SINGLE_BACKSLASH_END,
+    TWO_STAR,
+} Error;
+
 void log_write(int status, char* format, ...);
 
 void highlite_word(char* str, int col, size_t str_len)
@@ -40,14 +51,93 @@ char* get_suffix(char* file_name)
     return NULL;
 }
 
-char* skip_space(char* str)
+void print_error(char* string, int status, int column, int pointer_len)
 {
-    char* temp = str;
-    while (*temp == ' ') {
-        temp++;
+    switch (status) {
+    case FIRST_STAR:
+        printf(RED_COLOR_STR("Error") " at pattern: Before the metacharacters '*' there must be some character\n");
+        log_write(
+                MESSAGE,
+                "[ERROR] at pattern: Before the metacharacters '*' there must "
+                "be "
+                "some character\n\n\n");
+        break;
+    case SINGLE_BACKSLASH_END:
+        printf(RED_COLOR_STR("Error") " at pattern: The character '\\' should be followed by some character\n");
+        log_write(
+                MESSAGE,
+                "[ERROR] at pattern: The character '\\' should be followed by "
+                "some character\n\n\n");
+        break;
+    case TWO_STAR:
+        printf(RED_COLOR_STR("Error") " at pattern: Two '*' characters can't follow each other\n");
+        log_write(
+                MESSAGE,
+                "[ERROR] at pattern: Two '*' characters can't follow each "
+                "other\n\n\n");
+        break;
     }
+    printf(RED_COLOR_STR("\t%s\n\t"), string);
 
-    return temp;
+    int i;
+    printf(RED_COLOR);
+
+    for (i = 0; i < column; i++)
+        putchar('~');
+
+    for (int i = 0; i < pointer_len; i++)
+        putchar('^');
+
+    size_t str_len = strlen(string);
+    for (; i < str_len - pointer_len; i++)
+        putchar('~');
+
+    printf(DEFAULT_COLOR "\n");
+    exit(EXIT_FAILURE);
+}
+
+void write_correct_pattern(char* buf, char* pattern, int i)
+{
+    strcpy(buf + i, pattern + i + 1);
+}
+
+int check_two_start1(char* pattern)
+{
+    return (pattern[0] != '\\' && pattern[1] == '*' && pattern[2] == '*');
+}
+
+int check_two_start2(char* pattern)
+{
+    return (pattern[0] == '\\' && pattern[2] == '*' && pattern[3] == '*');
+}
+
+void check_pattern(char* pattern)
+{
+    size_t len = strlen(pattern);
+    char buf[len + 1];
+    char patternbuf[len + 1];
+    strcpy(buf, pattern);
+    strcpy(patternbuf, pattern);
+
+    if (pattern[0] == '*')
+        print_error(pattern, FIRST_STAR, 0, 1);
+    else if (pattern[len - 1] == '\\' && pattern[len - 2] != '\\')
+        print_error(pattern, SINGLE_BACKSLASH_END, len - 1, 1);
+
+    for (int i = 0; i < len - 2; i++) {
+        if (check_two_start1(pattern + i)) {
+            strcpy(pattern, patternbuf);
+            print_error(pattern, TWO_STAR, i + 1, 2);
+        } else if (check_two_start2(pattern + i)) {
+            strcpy(pattern, patternbuf);
+            print_error(pattern, TWO_STAR, i + 2, 2);
+        }
+        if (pattern[i] == '\\' && pattern[i + 2] == '*'
+            && pattern[i - 1] != '\\') {
+            write_correct_pattern(buf, pattern, i);
+            strcpy(pattern, buf);
+        }
+    }
 }
 
 void process_file(char* path, char* pattern, char* name)
@@ -60,7 +150,6 @@ void process_file(char* path, char* pattern, char* name)
     log_write(MESSAGE, "In file \"%s\":\n", name);
 
     while (fgets(word, MAX_LEN * 4, file) != NULL) {
-        // word = skip_space(word);
         size_t word_size = strlen(word);
         line++;
         column = seek_substring_KMP(word, pattern, &len);
@@ -73,7 +162,6 @@ void process_file(char* path, char* pattern, char* name)
                 log_write(MESSAGE, "\"\n");
 
                 i = len + column;
-                // word = skip_space(word);
                 column = seek_substring_KMP(word + i, pattern, &len) + i;
                 i--;
             } else {
@@ -233,6 +321,7 @@ int main(int argc, char* argv[])
     log_write(TIME, NULL);
     printf("Searching for \"\e[1;32m%s\e[0m\"\n\n", pattern);
     log_write(MESSAGE, "Searching for \"%s\"\n", pattern);
+    check_pattern(pattern);
 
     process_dirs(pattern, directory, is_recursive);
 
