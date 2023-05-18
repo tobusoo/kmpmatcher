@@ -1,6 +1,6 @@
 APP_NAME = kmpmatcher
 
-CFLAGS = -Wall -Werror -I src
+CFLAGS = -Wall -Werror -I src -g -O0
 DEPSFLAGS = -MMD
 CC = gcc
 

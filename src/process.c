@@ -18,15 +18,10 @@ void highlite_word(char* str, int col, size_t str_len)
     printf("\e[0m");
 }
 
-void process_file(char* path, char* pattern, char* name)
+int find_match(FILE* file, char* pattern)
 {
-    FILE* file = fopen(path, "rb");
-    char* word = malloc(sizeof(char) * MAX_LEN * 4);
     int cnt = 0, len = 0, line = 0, column = 0;
-
-    printf("\e[1;35m%s\e[0m:\n", name);
-    log_write(MESSAGE, "In file \"%s\":\n", name);
-
+    char* word = malloc(sizeof(char) * MAX_LEN * 4);
     while (fgets(word, MAX_LEN * 4, file) != NULL) {
         size_t word_size = strlen(word);
         line++;
@@ -47,12 +42,28 @@ void process_file(char* path, char* pattern, char* name)
             }
         }
     }
-    printf("\n");
+
+    free(word);
+    return cnt;
+}
+
+void process_file(char* path, char* pattern, char* name)
+{
+    FILE* file = fopen(path, "rb");
+    if (!file) {
+        free(path);
+        print_error(path, CANT_OPEN_FILE, 0, 0);
+    }
+
+    printf("\e[1;35m%s\e[0m:\n", name);
+    log_write(MESSAGE, "In file \"%s\":\n", name);
+
+    int cnt = find_match(file, pattern);
 
     if (cnt == 0)
         log_write(MESSAGE, "No results found\n");
 
-    free(word);
+    printf("\n");
     free(path);
     fclose(file);
 }
@@ -68,24 +79,19 @@ char* get_path(char* path, char* name)
     return file_path;
 }
 
-void process_dirs(char* pattern, char* path, int is_recursive)
+void traverse_dir(List* dir_list, char* pattern)
 {
-    if (strcmp(path, "..") == 0) {
-        printf("\e[1;31mERROR\e[0m: don't use \"%s\" directory\n", path);
-        log_write(MESSAGE, "[ERROR] don't use \"%s\" directory\n", path);
-        return;
-    }
-    DIR* dir = opendir(path);
-    if (!dir) {
-        printf("\e[1;31mError\e[0m: can't open \"%s\" directory\n", path);
-        log_write(MESSAGE, "[ERROR] can't open \"%s\" directory\n", path);
-        return;
-    }
+    list_sort(dir_list);
 
-    printf("In dir \e[1;34m%s\e[0m:\n", path);
-    log_write(MESSAGE, "In dir \"%s\":\n", path);
+    for (List* i = dir_list; i != NULL; i = i->next) {
+        printf("\n");
+        process_dirs(pattern, i->string, RECURSIVE);
+    }
+}
+
+int process_dir(DIR* dir, List** dir_list, char* pattern, char* path)
+{
     struct dirent* file;
-    List* dir_list = NULL;
     int file_cnt = 0;
 
     while ((file = readdir(dir)) != NULL) {
@@ -96,15 +102,32 @@ void process_dirs(char* pattern, char* path, int is_recursive)
             file_cnt++;
             continue;
         }
-
         char* file_path = get_path(path, file->d_name);
 
         if ((file->d_type & DT_DIR) == DT_DIR) {
-            dir_list = list_add(dir_list, file_path);
+            *dir_list = list_add(*dir_list, file_path);
         } else if ((file->d_type & DT_REG) == DT_REG) {
             process_file(file_path, pattern, file->d_name);
         }
+        file_cnt++;
     }
+
+    return file_cnt;
+}
+
+void process_dirs(char* pattern, char* path, int is_recursive)
+{
+    DIR* dir = opendir(path);
+    if (!dir) {
+        print_error(path, CANT_OPEN_DIR, 0, 0);
+    }
+
+    printf("In dir \e[1;34m%s\e[0m:\n", path);
+    log_write(MESSAGE, "In dir \"%s\":\n", path);
+
+    List* dir_list = NULL;
+
+    int file_cnt = process_dir(dir, &dir_list, pattern, path);
 
     if (file_cnt == 0) {
         printf("\e[1;33m[INFO]\e[0m Empty directory\n");
@@ -112,12 +135,7 @@ void process_dirs(char* pattern, char* path, int is_recursive)
     }
 
     if (is_recursive) {
-        list_sort(dir_list);
-
-        for (List* i = dir_list; i != NULL; i = i->next) {
-            printf("\n");
-            process_dirs(pattern, i->string, RECURSIVE);
-        }
+        traverse_dir(dir_list, pattern);
     }
 
     closedir(dir);

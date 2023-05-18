@@ -10,6 +10,8 @@ typedef enum {
     FIRST_STAR,
     SINGLE_BACKSLASH_END,
     TWO_STAR,
+    CANT_OPEN_DIR,
+    CANT_OPEN_FILE,
 } Error;
 
 void print_error(char* string, int status, int column, int pointer_len);

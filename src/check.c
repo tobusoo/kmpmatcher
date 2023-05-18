@@ -41,6 +41,14 @@ void print_error(char* string, int status, int column, int pointer_len)
                 "[ERROR] at pattern: Two '*' characters can't follow each "
                 "other\n\n\n");
         break;
+    case CANT_OPEN_DIR:
+        printf("\e[1;31mError\e[0m: can't open \"%s\" directory\n", string);
+        log_write(MESSAGE, "[ERROR] can't open \"%s\" directory\n\n\n", string);
+        exit(EXIT_FAILURE);
+    case CANT_OPEN_FILE:
+        printf("\e[1;31mError\e[0m: can't open \"%s\" directory\n", string);
+        log_write(MESSAGE, "[ERROR] can't open \"%s\" directory\n\n\n", string);
+        exit(EXIT_FAILURE);
     }
     printf(RED_COLOR_STR("\t%s\n\t"), string);
 
@@ -113,8 +121,14 @@ void check_pattern(char* pattern)
 
     if (pattern[0] == '*')
         print_error(pattern, FIRST_STAR, 0, 1);
-    else if (pattern[len - 1] == '\\' && pattern[len - 2] != '\\')
+    else if (pattern[len - 1] == '\\' && pattern[len - 2] != '\\' && len > 1)
         print_error(pattern, SINGLE_BACKSLASH_END, len - 1, 1);
+    else if (len == 1 && pattern[0] == '\\')
+        print_error(pattern, SINGLE_BACKSLASH_END, 0, 1);
+
+    if (len < 2) {
+        return;
+    }
 
     for (int i = 0; i < len - 2; i++) {
         if (check_two_start1(pattern + i)) {
@@ -125,7 +139,8 @@ void check_pattern(char* pattern)
             print_error(pattern, TWO_STAR, i + 2, 2);
         }
         if (pattern[i] == '\\' && pattern[i + 2] == '*'
-            && pattern[i - 1] != '\\') {
+            && pattern[i - 1] != '\\' && pattern[i + 1] != '.'
+            && pattern[i + 1] != '*' && pattern[i + 1] != '\\') {
             write_correct_pattern(buf, pattern, i);
             strcpy(pattern, buf);
         }

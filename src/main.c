@@ -20,6 +20,8 @@ int main(int argc, char* argv[])
             pattern = argv[2];
         } else
             print_usage_message(argv[0]);
+    } else if (argc == 4) {
+        print_usage_message(argv[0]);
     }
 
     log_write(TIME, NULL);
@@ -28,8 +30,6 @@ int main(int argc, char* argv[])
     check_pattern(pattern);
 
     process_dirs(pattern, directory, is_recursive);
-
     log_write(MESSAGE, "\n\n");
-
     return 0;
 }
